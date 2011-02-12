@@ -145,6 +145,7 @@ module RDF::RSS10
      end
      
      def literal(txt)
+       options = {}
        if txt.attribute('lang')
          options[:language] = txt.attribute('lang').value.to_sym
        end
