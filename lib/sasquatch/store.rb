@@ -2,13 +2,14 @@ module Sasquatch
   class Store
     include HTTParty
     
-    attr_reader :store_name, :last_response
+    attr_reader :store_name, :last_response, :sparql_clients
     def initialize(storename, options={})
       self.class.base_uri "http://api.talis.com/stores/#{storename}"
       @store_name = storename
       if options[:username]
         set_credentials(options[:username], options[:password])
-      end        
+      end
+      @sparql_clients = {:public=>SPARQL::Client.new("http://api.talis.com/stores/#{storename}/services/sparql")}
     end
     
     def set_credentials(username, password)
@@ -81,14 +82,14 @@ module Sasquatch
       send_changeset(graph, versioned)   
     end
     
-    def replace_triple(old_stmt, new_stmt)
-      replace_triples({old_triple=>new_triple})
+    def replace_triple(old_stmt, new_stmt, versioned=false)
+      replace_triples({old_triple=>new_triple}, versioned)
     end
 
     ##
     # takes a Hash in form of {old_statement=>replacement_statement}
     #
-    def replace_triples(changes)
+    def replace_triples(changes, versioned=false)
       changesets = {}
       changes.each_pair do |old_stmt, new_stmt|
         changesets[old_stmt.subject] ||= Changeset.new(old_stmt.subject)
@@ -180,6 +181,10 @@ module Sasquatch
         end
       end
       send_changeset(graph, versioned)
+    end
+    
+    def sparql(*variables)
+      SparqlBuilder.init(self,variables) 
     end
     
     def parse_ntriples(body)
