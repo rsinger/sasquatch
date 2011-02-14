@@ -9,7 +9,7 @@ module Sasquatch
       if options[:username]
         set_credentials(options[:username], options[:password])
       end
-      @sparql_clients = {:public=>SPARQL::Client.new("http://api.talis.com/stores/#{storename}/services/sparql")}
+
     end
     
     def set_credentials(username, password)
@@ -186,6 +186,32 @@ module Sasquatch
     def sparql(*variables)
       SparqlBuilder.init(self,variables) 
     end
+    
+    def sparql_describe(query, graph=:default)
+      path = "/services/sparql"
+      unless graph == :default
+        path << "/graphs/#{graph}"
+      end
+      options = {:query=>{:query=>query, :output=>'ntriples'}}
+      @last_response = get(path, options)
+      graph = parse_ntriples(@last_response.body)
+      graph      
+    end
+    
+    alias :sparql_construct :sparql_describe 
+    
+    def sparql_select(query, graph=:default)
+      path = "/services/sparql"
+      unless graph == :default
+        path << "/graphs/#{graph}"
+      end
+      options = {:query=>{:query=>query, :output=>'json'}}
+      @last_response = get(path, options)
+      SPARQL::Client.parse_json_bindings(@last_response.body) || false
+    end
+    
+    alias :sparql_ask :sparql_select
+
     
     def parse_ntriples(body)
       read_graph(body, :ntriples)
