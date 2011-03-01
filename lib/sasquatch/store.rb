@@ -1,6 +1,7 @@
 module Sasquatch
   class Store
     include HTTParty
+    default_timeout 30
     
     attr_reader :store_name, :last_response, :sparql_clients
     def initialize(storename, options={})
@@ -34,6 +35,28 @@ module Sasquatch
       graph      
     end
     
+    def augment(uri, pattern=:cbd)
+      graph = augment_multi([uri], pattern)
+      graph.set_requested_resource(uri)
+      graph
+    end
+    
+    def augment_multi(uris, pattern=:cbd)
+      sparql = "DESCRIBE ?o "
+      i = 1
+      where = []
+      uris.each do |uri| 
+        sparql << "<#{uri}> "
+        where << "{<#{uri}> ?p ?o . }"
+        i += 1
+      end
+      sparql << "\nWHERE\n{ #{where.join(" UNION ")}  }"
+      options = {:body=>{:query=>sparql, :output=>"ntriples"}}
+      @last_response = post("/services/sparql", options)
+      graph = parse_ntriples(@last_response.body)
+      graph
+    end      
+    
     def get(path, options)
       self.class.get(path, options)      
     end
@@ -64,7 +87,7 @@ module Sasquatch
     end
     
     def remove_triple(stmt, versioned=false)
-      remove_triples([stmt], versioned)
+      remove_triples([stmt], versioned, creator)
     end
     
     def remove_triples(stmts, versioned=false)
@@ -79,17 +102,17 @@ module Sasquatch
           graph << stmt
         end
       end
-      send_changeset(graph, versioned)   
+      send_changeset(graph, versioned, creator)   
     end
     
     def replace_triple(old_stmt, new_stmt, versioned=false)
-      replace_triples({old_triple=>new_triple}, versioned)
+      replace_triples({old_triple=>new_triple}, versioned, creator)
     end
 
     ##
     # takes a Hash in form of {old_statement=>replacement_statement}
     #
-    def replace_triples(changes, versioned=false)
+    def replace_triples(changes, versioned=false, creator="sasquatch.rb")
       changesets = {}
       changes.each_pair do |old_stmt, new_stmt|
         changesets[old_stmt.subject] ||= Changeset.new(old_stmt.subject)
@@ -103,10 +126,10 @@ module Sasquatch
           graph << stmt
         end
       end
-      send_changeset(graph, versioned)   
+      send_changeset(graph, versioned, creator)   
     end 
     
-    def replace(graph_statements_or_resource, versioned=false)
+    def replace(graph_statements_or_resource, versioned=false, creator="sasquatch.rb")
       uris = case graph_statements_or_resource.class.name
       when "RDF::Graph"
         subjects = []
@@ -144,28 +167,33 @@ module Sasquatch
           graph << stmt
         end
       end
-      send_changeset(graph, versioned)
+      send_changeset(graph, versioned, creator)
     end
     
-    def send_changeset(graph, versioned=false)
+    def send_changeset(graph, versioned=false, creator="sasquatch.rb")
       path = "/meta"
-      path << "/meta/changesets" if versioned
+      path << "/changesets" if versioned
+
+      graph.query(:predicate=>RDF.type, :object=>RDF::Talis::Changeset.ChangeSet).each_subject do |cs|
+        graph << [cs, RDF::Talis::Changeset.creatorName, creator]
+      end
+        
       options = {:headers=>{"Content-Type"=> "application/vnd.talis.changeset+turtle"}, :body=>graph.to_ntriples, :digest_auth=>@auth}
       @last_response = post(path, options )      
-      if !versioned && @last_response.response.code == "204"      
+      if !versioned && @last_response.response.code =~ /^20[0-9]$/
         true
-      elsif versioned && @last_response.response.code == "201"
+      elsif versioned && @last_response.response.code =~ /20[012]/
         true
       else
         false
       end      
     end
     
-    def delete_uri(uri, versioned=false)
-      delete_uris([uri],versioned)
+    def delete_uri(uri, versioned=false, creator="sasquatch.rb")
+      delete_uris([uri], versioned, creator)
     end
     
-    def delete_uris(uris, versioned=false)
+    def delete_uris(uris, versioned=false, creator="sasquatch.rb")
       current_graph = describe_multi(uris)
       changesets = []
       uris.each do |uri|
@@ -180,7 +208,7 @@ module Sasquatch
           graph << stmt
         end
       end
-      send_changeset(graph, versioned)
+      send_changeset(graph, versioned, creator)
     end
     
     def sparql(*variables)

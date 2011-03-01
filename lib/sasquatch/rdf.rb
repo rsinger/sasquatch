@@ -22,7 +22,7 @@ module RDF
     
     def requested_resource
       if self.respond_to?(:"[]") # in case rdf-rdfobjects is available
-        self[@uri]
+        self[@requested_resource]
       else
         RDF::URI.intern(@requested_resource)
       end

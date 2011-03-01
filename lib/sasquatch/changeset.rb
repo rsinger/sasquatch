@@ -38,7 +38,7 @@ module Sasquatch
     end
     
     def remove_statements(stmts)
-      stmts = [stmts] unless stmts.is_a?(Array)
+      stmts = [stmts] if stmts.is_a?(RDF::Statement)
       stmts.each do |stmt|
         raise ArgumentError unless stmt.subject == @subject_of_change        
         @statements.concat changeset_statement(stmt, :removal)
@@ -46,7 +46,7 @@ module Sasquatch
     end
     
     def add_statements(stmts)
-      stmts = [stmts] unless stmts.is_a?(Array)
+      stmts = [stmts] if stmts.is_a?(RDF::Statement)
       stmts.each do |stmt|
         next unless stmt
         raise ArgumentError unless stmt.subject == @subject_of_change        
