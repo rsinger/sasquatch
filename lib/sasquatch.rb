@@ -2,6 +2,7 @@ require 'httparty'
 require 'cgi'
 require 'rdf'
 require 'rdf/ntriples'
+require 'rdf/json'
 require 'sparql/client'
 require 'json'
 module Sasquatch

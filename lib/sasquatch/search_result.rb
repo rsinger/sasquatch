@@ -27,7 +27,7 @@ module Sasquatch
       @graph.query(:predicate=>RDF::URI.intern("http://a9.com/-/spec/opensearch/1.1/totalResults")).each do |stmt|
         @total_results = stmt.object.value.to_i
       end
-      @total_result ||= 0
+      @total_results ||= 0
       @graph.query(:predicate=>RDF::URI.intern("http://a9.com/-/spec/opensearch/1.1/startIndex")).each do |stmt|
         @start_index = stmt.object.value.to_i
       end
@@ -51,8 +51,12 @@ module Sasquatch
         seq_uri = items.object
       end
       return unless seq_uri
-      @graph.query(:subject=>seq_uri, :predicate=>RDF.li).each do |li|
-        self << li.object
+      @graph.query(:subject=>seq_uri).each do |li|
+        if li.predicate.to_s =~ /http:\/\/www\.w3\.org\/1999\/02\/22-rdf-syntax-ns#_(\d)+$/
+          (ns,idx) = li.predicate.to_s.split("#_")
+          idx = (idx.to_i - 1)
+          self[idx] = li.object
+        end
       end
     end
     

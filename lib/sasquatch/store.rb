@@ -78,11 +78,15 @@ module Sasquatch
     end
     
     def search(query, options={})
+      accept = self.class.headers['Accept']
+      self.class.headers 'Accept' => 'application/json'
       path = "/items"
       opts = {:query=>options}
       opts[:query][:query] = query
       @last_response = get(path, opts)
-      graph = parse_rss10(@last_response.body)
+      #graph = parse_rss10(@last_response.body)
+      graph = parse_json(@last_response.body)      
+      self.class.headers 'Accept' => accept
       SearchResult.new_from_query(graph, opts, self)
     end
     
@@ -240,11 +244,38 @@ module Sasquatch
     
     alias :sparql_ask :sparql_select
 
+    def access_status
+      accept = self.class.headers['Accept']
+      self.class.headers 'Accept' => 'application/json'
+      path = "/config/access-status"
+      @last_response = get(path, {})
+      graph = parse_json(@last_response.body)      
+      self.class.headers 'Accept' => accept      
+      graph
+    end
+    
+    def read_only?
+      access_status.query(:predicate=>RDF::URI.intern('http://schemas.talis.com/2006/bigfoot/configuration#accessMode')).each do |stmt|
+        return true if stmt.object == RDF::URI.intern("http://schemas.talis.com/2006/bigfoot/statuses#read-only")
+      end
+      return false
+    end
+    
+    def status_message
+      access_status.query(:predicate=>RDF::URI.intern('http://schemas.talis.com/2006/bigfoot/configuration#statusMessage')).each do |stmt|
+        return stmt.object.value
+      end
+      nil
+    end
     
     def parse_ntriples(body)
       read_graph(body, :ntriples)
     end
     
+    def parse_json(body)
+      read_graph(body, :json)
+    end
+        
     def parse_rss10(body)      
       read_graph(body, :rss10)
     end
