@@ -25,7 +25,7 @@ Gem::Specification.new do |gem|
   gem.requirements = []
   gem.add_runtime_dependency 'httparty', '>= 0.7.4'
   gem.add_runtime_dependency 'rdf', '>= 0.3.1'
-  gem.add_runtime_dependency 'rdf/json', '>= 0.3.0'
+  gem.add_runtime_dependency 'rdf-json', '>= 0.3.0'
   gem.add_runtime_dependency 'sparql-client', '>= 0.0.9'
   gem.add_development_dependency 'rspec', '>= 2.1.0'
   gem.post_install_message = nil
