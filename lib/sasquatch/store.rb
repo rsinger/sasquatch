@@ -86,7 +86,7 @@ module Sasquatch
       @last_response = get(path, opts)
       #graph = parse_rss10(@last_response.body)
       graph = parse_json(@last_response.body)      
-      self.class.headers 'Accept' => accept
+      self.class.headers 'Accept' => accept || "text/plain"
       SearchResult.new_from_query(graph, opts, self)
     end
     
