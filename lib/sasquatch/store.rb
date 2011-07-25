@@ -18,7 +18,7 @@ module Sasquatch
     end
     
     def describe(uri)
-      options = {:query=>{:about=>uri, :output=>"ntriples"}}
+      options = {:query=>{:about=>uri, :output=>"ntriples"}, :digest_auth=>@auth}
       @last_response = get("/#{@store_name}/meta", options)
       graph = parse_ntriples(@last_response.body)
       graph.set_requested_resource(uri)
@@ -28,7 +28,7 @@ module Sasquatch
     def describe_multi(uris)
       sparql = "DESCRIBE "
       uris.each {|uri| sparql << "<#{uri}> "}
-      options = {:query=>{:query=>sparql, :output=>"ntriples"}}
+      options = {:query=>{:query=>sparql, :output=>"ntriples"}, :digest_auth=>@auth}
       @last_response = get("/#{@store_name}/services/sparql", options)
       graph = parse_ntriples(@last_response.body)
       graph      
@@ -50,7 +50,7 @@ module Sasquatch
         i += 1
       end
       sparql << "\nWHERE\n{ #{where.join(" UNION ")}  }"
-      options = {:body=>{:query=>sparql, :output=>"ntriples"}}
+      options = {:body=>{:query=>sparql, :output=>"ntriples"}, :digest_auth=>@auth}
       @last_response = post("/#{@store_name}/services/sparql", options)
       graph = parse_ntriples(@last_response.body)
       graph
@@ -82,6 +82,7 @@ module Sasquatch
       path = "/#{@store_name}/items"
       opts = {:query=>options}
       opts[:query][:query] = query
+      opts[:digest_auth] = @auth
       @last_response = get(path, opts)
       #graph = parse_rss10(@last_response.body)
       graph = parse_json(@last_response.body)      
@@ -223,7 +224,7 @@ module Sasquatch
       unless graph == :default
         path << "/graphs/#{graph}"
       end
-      options = {:query=>{:query=>query, :output=>'ntriples'}}
+      options = {:query=>{:query=>query, :output=>'ntriples'}, :digest_auth=>@auth}
       @last_response = get(path, options)
       graph = parse_ntriples(@last_response.body)
       graph      
@@ -236,7 +237,7 @@ module Sasquatch
       unless graph == :default
         path << "/graphs/#{graph}"
       end
-      options = {:query=>{:query=>query, :output=>'json'}}
+      options = {:query=>{:query=>query, :output=>'json'}, :digest_auth=>@auth}
       @last_response = get(path, options)
       SPARQL::Client.parse_json_bindings(@last_response.body) || false
     end
@@ -247,7 +248,7 @@ module Sasquatch
       accept = self.class.headers['Accept']
       self.class.headers 'Accept' => 'application/json'
       path = "/#{@store_name}/config/access-status"
-      @last_response = get(path, {})
+      @last_response = get(path, {:digest_auth=>@auth})
       graph = parse_json(@last_response.body)      
       self.class.headers 'Accept' => accept      
       graph
