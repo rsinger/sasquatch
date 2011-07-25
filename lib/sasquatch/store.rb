@@ -2,10 +2,9 @@ module Sasquatch
   class Store
     include HTTParty
     default_timeout 30
-    
+    base_uri "http://api.talis.com/stores"
     attr_reader :store_name, :last_response, :sparql_clients
     def initialize(storename, options={})
-      self.class.base_uri "http://api.talis.com/stores/#{storename}"
       @store_name = storename
       if options[:username]
         set_credentials(options[:username], options[:password])
@@ -15,12 +14,12 @@ module Sasquatch
     
     def set_credentials(username, password)
       @auth = {:username => username, :password => password}
-      @auth[:headers] = self.get("/snapshots", {}).headers['www-authenticate']
+      @auth[:headers] = self.get("/#{@store_name}/snapshots", {}).headers['www-authenticate']
     end
     
     def describe(uri)
       options = {:query=>{:about=>uri, :output=>"ntriples"}}
-      @last_response = get("/meta", options)
+      @last_response = get("/#{@store_name}/meta", options)
       graph = parse_ntriples(@last_response.body)
       graph.set_requested_resource(uri)
       graph
@@ -30,7 +29,7 @@ module Sasquatch
       sparql = "DESCRIBE "
       uris.each {|uri| sparql << "<#{uri}> "}
       options = {:query=>{:query=>sparql, :output=>"ntriples"}}
-      @last_response = get("/services/sparql", options)
+      @last_response = get("/#{@store_name}/services/sparql", options)
       graph = parse_ntriples(@last_response.body)
       graph      
     end
@@ -52,7 +51,7 @@ module Sasquatch
       end
       sparql << "\nWHERE\n{ #{where.join(" UNION ")}  }"
       options = {:body=>{:query=>sparql, :output=>"ntriples"}}
-      @last_response = post("/services/sparql", options)
+      @last_response = post("/#{@store_name}/services/sparql", options)
       graph = parse_ntriples(@last_response.body)
       graph
     end      
@@ -66,7 +65,7 @@ module Sasquatch
     end
     
     def save(graph_statement_or_resource, graph_name=nil)
-      path = "/meta"
+      path = "/#{@store_name}/meta"
       path << "/graphs/#{graph_name}" if graph_name
       options = {:headers=>{"Content-Type"=> "text/turtle"}, :body=>graph_statement_or_resource.to_ntriples, :digest_auth=>@auth}
       @last_response = post(path, options )      
@@ -80,7 +79,7 @@ module Sasquatch
     def search(query, options={})
       accept = self.class.headers['Accept']
       self.class.headers 'Accept' => 'application/json'
-      path = "/items"
+      path = "/#{@store_name}/items"
       opts = {:query=>options}
       opts[:query][:query] = query
       @last_response = get(path, opts)
@@ -175,7 +174,7 @@ module Sasquatch
     end
     
     def send_changeset(graph, versioned=false, creator="sasquatch.rb")
-      path = "/meta"
+      path = "/#{@store_name}/meta"
       path << "/changesets" if versioned
 
       graph.query(:predicate=>RDF.type, :object=>RDF::Talis::Changeset.ChangeSet).each_subject do |cs|
@@ -220,7 +219,7 @@ module Sasquatch
     end
     
     def sparql_describe(query, graph=:default)
-      path = "/services/sparql"
+      path = "/#{@store_name}/services/sparql"
       unless graph == :default
         path << "/graphs/#{graph}"
       end
@@ -233,7 +232,7 @@ module Sasquatch
     alias :sparql_construct :sparql_describe 
     
     def sparql_select(query, graph=:default)
-      path = "/services/sparql"
+      path = "/#{@store_name}/services/sparql"
       unless graph == :default
         path << "/graphs/#{graph}"
       end
@@ -247,7 +246,7 @@ module Sasquatch
     def access_status
       accept = self.class.headers['Accept']
       self.class.headers 'Accept' => 'application/json'
-      path = "/config/access-status"
+      path = "/#{@store_name}/config/access-status"
       @last_response = get(path, {})
       graph = parse_json(@last_response.body)      
       self.class.headers 'Accept' => accept      
