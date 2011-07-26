@@ -28,7 +28,7 @@ module Sasquatch
     
     def describe
       @form = :describe
-      @values = *@variables.flatten.map { |var|
+      @values = @variables.flatten.map { |var|
         [var, var.is_a?(RDF::URI) ? var : RDF::Query::Variable.new(var)]
       }      
       self
