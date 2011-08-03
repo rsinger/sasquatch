@@ -224,8 +224,8 @@ module Sasquatch
       unless graph == :default
         path << "/graphs/#{graph}"
       end
-      options = {:query=>{:query=>query, :output=>'ntriples'}, :digest_auth=>@auth}
-      @last_response = get(path, options)
+      options = {:headers=>{"Accept"=> "text/plain"}, :body=>{:query=>query}, :digest_auth=>@auth}
+      @last_response = post(path, options)
       graph = parse_ntriples(@last_response.body)
       graph      
     end
@@ -237,7 +237,7 @@ module Sasquatch
       unless graph == :default
         path << "/graphs/#{graph}"
       end
-      options = {:query=>{:query=>query, :output=>'json'}, :digest_auth=>@auth}
+      options = {:headers=>{"Accept"=> "application/json"}, :body=>{:query=>query}, :digest_auth=>@auth}
       @last_response = get(path, options)
       SPARQL::Client.parse_json_bindings(@last_response.body) || false
     end

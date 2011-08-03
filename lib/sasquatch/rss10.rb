@@ -3,6 +3,7 @@ module RDF
   module RSS10
      require File.dirname(__FILE__) + '/rss10/format'
      require File.dirname(__FILE__) + '/rss10/reader'     
+     require File.dirname(__FILE__) + '/rss10/writer' 
     # require 'rdf/n3/vocab'
     # require 'rdf/n3/patches/array_hacks'
     # require 'rdf/n3/patches/graph_properties'
